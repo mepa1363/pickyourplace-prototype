@@ -1,0 +1,15 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-pickyourplace-dev-03140-authRole",
+      "UnauthRoleArn": "arn:aws:iam::030381499923:role/amplify-pickyourplace-dev-03140-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::030381499923:role/amplify-pickyourplace-dev-03140-authRole",
+      "Region": "us-west-2",
+      "DeploymentBucketName": "amplify-pickyourplace-dev-03140-deployment",
+      "UnauthRoleName": "amplify-pickyourplace-dev-03140-unauthRole",
+      "StackName": "amplify-pickyourplace-dev-03140",
+      "StackId": "arn:aws:cloudformation:us-west-2:030381499923:stack/amplify-pickyourplace-dev-03140/1b9dd900-0a25-11ec-948a-02e37b586473",
+      "AmplifyAppId": "d2luczs9ink8l4"
+    }
+  }
+}
