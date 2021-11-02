@@ -1,10 +1,10 @@
 export default {
   source: {
-    url: `${process.env.VUE_APP_TILE_SERVER}/public.bikeways/{z}/{x}/{y}.pbf`
+    url: "mapbox://mepa1363.9raq18ol"
   },
   layer: {
     id: "accessibility-bikeways",
-    source: "public.bikeways",
+    source: "pickyourplace_bikeways",
     minZoom: 5,
     maxZoom: 22,
     color: "#ffffcc"

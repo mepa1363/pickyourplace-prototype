@@ -395,7 +395,7 @@ export default {
           type: "circle",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
@@ -417,7 +417,7 @@ export default {
         {
           id: "selected-property",
           type: "circle",
-          source: { type: "vector", tiles: [url] },
+          source: { type: "vector", url: url },
           "source-layer": sourceLayer,
           minzoom: 8,
           maxzoom: maxZoom,
@@ -433,7 +433,7 @@ export default {
             "circle-stroke-color": "transparent",
             "circle-opacity": 0.8
           },
-          filter: ["==", "id", ""]
+          filter: ["==", "gid", ""]
         },
         id
       );
@@ -463,7 +463,7 @@ export default {
       });
 
       this.map.on("click", id, e => {
-        const id = e.features[0].id;
+        const id = e.features[0].properties.gid;
         const address = e.features[0].properties.address;
         const community = e.features[0].properties.community;
         const coordinates = e.features[0].geometry.coordinates;
@@ -504,7 +504,7 @@ export default {
           landSizeFt
         );
 
-        this.map.setFilter("selected-property", ["==", "id", id]);
+        this.map.setFilter("selected-property", ["==", "gid", id]);
 
         this.map.flyTo({
           center: coordinates,
@@ -551,7 +551,7 @@ export default {
           type: "fill",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url
           },
           "source-layer": sourceLayer,
           paint: {
@@ -609,7 +609,7 @@ export default {
           type: "fill",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url
           },
           "source-layer": sourceLayer,
           paint: {
@@ -639,7 +639,7 @@ export default {
         type: "symbol",
         source: {
           type: "vector",
-          tiles: [url]
+          url: url
         },
         "source-layer": sourceLayer,
         minzoom: minZoom,
@@ -710,7 +710,7 @@ export default {
         type: "symbol",
         source: {
           type: "vector",
-          tiles: [url]
+          url: url
         },
         "source-layer": sourceLayer,
         minzoom: minZoom,
@@ -748,7 +748,7 @@ export default {
         type: "symbol",
         source: {
           type: "vector",
-          tiles: [url]
+          url: url
         },
         "source-layer": sourceLayer,
         minzoom: minZoom,
@@ -777,7 +777,7 @@ export default {
           type: "fill",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
@@ -800,7 +800,7 @@ export default {
           type: "line",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
@@ -826,7 +826,7 @@ export default {
           type: "line",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
