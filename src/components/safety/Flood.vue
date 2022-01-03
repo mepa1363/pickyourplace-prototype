@@ -31,24 +31,28 @@ export default {
   data: () => ({
     floodLayers: false,
     floodLayer: null,
-    description: null
+    description: null,
   }),
   watch: {
     floodLayer(value) {
-      this.$emit("layerStatus", {
-        status: !!value,
-        id: value
-      });
+      if (value != null) {
+        this.$emit("layerStatus", {
+          status: !!value,
+          id: value,
+        });
+      }
 
-      this.description = this.features.filter(
-        feature => feature.layer.id === value
-      )[0].label.description;
+      if (value != null) {
+        this.description = this.features.filter(
+          (feature) => feature.layer.id === value
+        )[0].label.description;
+      }
 
       for (const feature of this.features) {
         if (feature.layer.id !== value) {
           this.$emit("layerStatus", {
             status: false,
-            id: feature.layer.id
+            id: feature.layer.id,
           });
         }
       }
@@ -60,11 +64,11 @@ export default {
         for (const feature of this.features) {
           this.$emit("layerStatus", {
             status: value,
-            id: feature.layer.id
+            id: feature.layer.id,
           });
         }
       }
-    }
-  }
+    },
+  },
 };
 </script>
