@@ -1,6 +1,4 @@
 {
-  "function": {},
-  "api": {},
   "hosting": {
     "S3AndCloudFront": {
       "service": "S3AndCloudFront",
