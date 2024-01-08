@@ -50,7 +50,10 @@
           @layerStatus="layerHandler"
         />
         <safety-accessibility
-          v-if="factor === 'safety' && (safetyAccessibilityEms || safetyAccessibilityFire)"
+          v-if="
+            factor === 'safety' &&
+            (safetyAccessibilityEms || safetyAccessibilityFire)
+          "
           :selectedPropertyLocation="propertyInfo.coordinates"
           @layerStatus="layerHandler"
           @accessibility="accessibilityHandler"
@@ -97,6 +100,7 @@
       </v-card-text>
     </v-card>
     <map-legend :legends="legends" />
+    <feedback />
   </div>
 </template>
 
@@ -129,6 +133,8 @@ import AccessibilityParks from "./accessibility/Parks.vue";
 import AccessibilityTrails from "./accessibility/Trails.vue";
 import AccessibilityBikeways from "./accessibility/Bikeways.vue";
 
+import Feedback from "./Feedback.vue";
+
 import BBOX from "@turf/bbox";
 
 export default {
@@ -145,6 +151,7 @@ export default {
     AccessibilityParks,
     AccessibilityTrails,
     AccessibilityBikeways,
+    Feedback,
   },
   data: () => ({
     map: null,
@@ -207,16 +214,16 @@ export default {
         }
       }
     },
-    safetyAccessibilityEms(value){
+    safetyAccessibilityEms(value) {
       if (!value && !this.safetyAccessibilityFire) {
         this.removeIsochroneLayer();
       }
     },
-    safetyAccessibilityFire(value){
+    safetyAccessibilityFire(value) {
       if (!value && !this.safetyAccessibilityEms) {
         this.removeIsochroneLayer();
       }
-    }
+    },
   },
   mounted() {
     mapboxgl.accessToken = process.env.VUE_APP_MAPBOX_API_KEY;

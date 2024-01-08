@@ -10,6 +10,11 @@
       "StackName": "amplify-pickyourplace-dev-205949",
       "StackId": "arn:aws:cloudformation:us-west-2:997428323809:stack/amplify-pickyourplace-dev-205949/6bc48a10-79a5-11ec-b3fe-020ab60124af",
       "AmplifyAppId": "d16o9zujzylxfz"
+    },
+    "categories": {
+      "hosting": {
+        "S3AndCloudFront": {}
+      }
     }
   }
 }
