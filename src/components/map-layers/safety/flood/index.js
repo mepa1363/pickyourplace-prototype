@@ -1,11 +1,11 @@
 export default [
   {
     source: {
-      url: `${process.env.VUE_APP_TILE_SERVER}/public.flood_probability_1/{z}/{x}/{y}.pbf`
+      url: "mapbox://mepa1363.1ncv1o6f"
     },
     layer: {
       id: "safety-flood-probability-1",
-      source: "public.flood_probability_1",
+      source: "pickyourplace_flood_1",
       color: "#43a2ca"
     },
     label: {
@@ -15,11 +15,11 @@ export default [
   },
   {
     source: {
-      url: `${process.env.VUE_APP_TILE_SERVER}/public.flood_probability_5/{z}/{x}/{y}.pbf`
+      url: "mapbox://mepa1363.5k55a3l7"
     },
     layer: {
       id: "safety-flood-probability-5",
-      source: "public.flood_probability_5",
+      source: "pickyourplace_flood_5",
       color: "#43a2ca"
     },
     label: {
@@ -29,11 +29,11 @@ export default [
   },
   {
     source: {
-      url: `${process.env.VUE_APP_TILE_SERVER}/public.flood_probability_10/{z}/{x}/{y}.pbf`
+      url: "mapbox://mepa1363.0ofoq57b"
     },
     layer: {
       id: "safety-flood-probability-10",
-      source: "public.flood_probability_10",
+      source: "pickyourplace_flood_10",
       color: "#43a2ca"
     },
     label: {
@@ -43,11 +43,11 @@ export default [
   },
   {
     source: {
-      url: `${process.env.VUE_APP_TILE_SERVER}/public.flood_probability_20/{z}/{x}/{y}.pbf`
+      url: "mapbox://mepa1363.d8u309g9"
     },
     layer: {
       id: "safety-flood-probability-20",
-      source: "public.flood_probability_20",
+      source: "pickyourplace_flood_20",
       color: "#43a2ca"
     },
     label: {

@@ -49,53 +49,58 @@
           :features="safetyFloodProbabilityLayers"
           @layerStatus="layerHandler"
         />
+        <safety-accessibility
+          v-if="
+            factor === 'safety' &&
+            (safetyAccessibilityEms || safetyAccessibilityFire)
+          "
+          :selectedPropertyLocation="propertyInfo.coordinates"
+          @layerStatus="layerHandler"
+          @accessibility="accessibilityHandler"
+        />
         <safety-ems
           v-if="factor === 'safety'"
           :layerId="safetyEmsLayer.layer.id"
-          :selectedPropertyLocation="propertyInfo.coordinates"
           @layerStatus="layerHandler"
         />
         <safety-fire-station
           v-if="factor === 'safety'"
           :layerId="safetyFireStationLayer.layer.id"
-          :selectedPropertyLocation="propertyInfo.coordinates"
           @layerStatus="layerHandler"
         />
         <accessibility
           v-if="factor === 'accessibility'"
+          :selectedPropertyLocation="propertyInfo.coordinates"
           @accessibility="accessibilityHandler"
         />
         <accessibility-schools
-          v-if="factor === 'accessibility' && accessibility != null"
+          v-if="factor === 'accessibility' && accessibilityMode != null"
           :layerId="accessibilitySchoolsLayer.layer.id"
-          :selectedPropertyLocation="propertyInfo.coordinates"
-          :accessibility="accessibility"
+          :accessibilityMode="accessibilityMode"
           @layerStatus="layerHandler"
         />
         <accessibility-parks
-          v-if="factor === 'accessibility' && accessibility != null"
+          v-if="factor === 'accessibility' && accessibilityMode != null"
           :layerId="accessibilityParksLayer.layer.id"
-          :selectedPropertyLocation="propertyInfo.coordinates"
-          :accessibility="accessibility"
+          :accessibilityMode="accessibilityMode"
           @layerStatus="layerHandler"
         />
         <accessibility-trails
-          v-if="factor === 'accessibility' && accessibility != null"
+          v-if="factor === 'accessibility' && accessibilityMode != null"
           :layerId="accessibilityTrailsLayer.layer.id"
-          :selectedPropertyLocation="propertyInfo.coordinates"
-          :accessibility="accessibility"
+          :accessibilityMode="accessibilityMode"
           @layerStatus="layerHandler"
         />
         <accessibility-bikeways
-          v-if="factor === 'accessibility' && accessibility != null"
+          v-if="factor === 'accessibility' && accessibilityMode != null"
           :layerId="accessibilityBikewaysLayer.layer.id"
-          :selectedPropertyLocation="propertyInfo.coordinates"
-          :accessibility="accessibility"
+          :accessibilityMode="accessibilityMode"
           @layerStatus="layerHandler"
         />
       </v-card-text>
     </v-card>
     <map-legend :legends="legends" />
+    <feedback />
   </div>
 </template>
 
@@ -117,6 +122,7 @@ import accessibilityBikewaysLayer from "./map-layers/accessibility/bikeways";
 
 import MapLegend from "./map-layers/Legend.vue";
 import PropertyAssessment from "./value/PropertyAssessment.vue";
+import SafetyAccessibility from "./safety/Accessibility.vue";
 import SafetyCrime from "./safety/Crime.vue";
 import SafetyFloodProbability from "./safety/Flood.vue";
 import SafetyEms from "./safety/EMS.vue";
@@ -127,12 +133,15 @@ import AccessibilityParks from "./accessibility/Parks.vue";
 import AccessibilityTrails from "./accessibility/Trails.vue";
 import AccessibilityBikeways from "./accessibility/Bikeways.vue";
 
+import Feedback from "./Feedback.vue";
+
 import BBOX from "@turf/bbox";
 
 export default {
   components: {
     MapLegend,
     PropertyAssessment,
+    SafetyAccessibility,
     SafetyCrime,
     SafetyFloodProbability,
     SafetyEms,
@@ -141,7 +150,8 @@ export default {
     AccessibilitySchools,
     AccessibilityParks,
     AccessibilityTrails,
-    AccessibilityBikeways
+    AccessibilityBikeways,
+    Feedback,
   },
   data: () => ({
     map: null,
@@ -153,13 +163,15 @@ export default {
     baseMapIndex: "waterway-label",
     safetyCrimeLayer: safetyCrimeLayer,
     safetyFloodProbabilityLayers: safetyFloodProbabilityLayers,
+    safetyAccessibilityEms: false,
+    safetyAccessibilityFire: false,
     safetyEmsLayer: safetyEmsLayer,
     safetyFireStationLayer: safetyFireStationLayer,
-    accessibility: null,
+    accessibilityMode: null,
     accessibilitySchoolsLayer: accessibilitySchoolsLayer,
     accessibilityParksLayer: accessibilityParksLayer,
     accessibilityTrailsLayer: accessibilityTrailsLayer,
-    accessibilityBikewaysLayer: accessibilityBikewaysLayer
+    accessibilityBikewaysLayer: accessibilityBikewaysLayer,
   }),
   watch: {
     showPropertyInfo(value) {
@@ -201,7 +213,17 @@ export default {
           }
         }
       }
-    }
+    },
+    safetyAccessibilityEms(value) {
+      if (!value && !this.safetyAccessibilityFire) {
+        this.removeIsochroneLayer();
+      }
+    },
+    safetyAccessibilityFire(value) {
+      if (!value && !this.safetyAccessibilityEms) {
+        this.removeIsochroneLayer();
+      }
+    },
   },
   mounted() {
     mapboxgl.accessToken = process.env.VUE_APP_MAPBOX_API_KEY;
@@ -213,19 +235,19 @@ export default {
       maxZoom: 22,
       center: [-114.07432, 51.05373],
       hash: true,
-      attributionControl: false
+      attributionControl: false,
     });
 
     map.addControl(
       new mapboxgl.AttributionControl({
         customAttribution:
-          "<a href='https://data.calgary.ca/'>&copy; City of Calgary</a>"
+          "<a href='https://data.calgary.ca/'>&copy; City of Calgary</a>",
       })
     );
     map.addControl(
       new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl
+        mapboxgl: mapboxgl,
       })
     );
     map.addControl(new ZoomControl(), "bottom-right");
@@ -233,7 +255,7 @@ export default {
 
     this.popup = new mapboxgl.Popup({
       closeButton: false,
-      closeOnClick: false
+      closeOnClick: false,
     });
 
     map.on("load", () => {
@@ -262,7 +284,7 @@ export default {
               15,
               0,
               15.05,
-              ["get", "height"]
+              ["get", "height"],
             ],
             "fill-extrusion-base": [
               "interpolate",
@@ -271,10 +293,10 @@ export default {
               15,
               0,
               15.05,
-              ["get", "min_height"]
+              ["get", "min_height"],
             ],
-            "fill-extrusion-opacity": 0.6
-          }
+            "fill-extrusion-opacity": 0.6,
+          },
         },
         firstSymbolId
       );
@@ -395,7 +417,7 @@ export default {
           type: "circle",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url,
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
@@ -404,11 +426,11 @@ export default {
             "circle-radius": radius,
             "circle-color": color,
             "circle-stroke-color": "transparent",
-            "circle-opacity": 0.8
+            "circle-opacity": 0.8,
           },
           layout: {
-            visibility: isVisible ? "visible" : "none"
-          }
+            visibility: isVisible ? "visible" : "none",
+          },
         },
         this.baseMapIndex
       );
@@ -417,28 +439,28 @@ export default {
         {
           id: "selected-property",
           type: "circle",
-          source: { type: "vector", tiles: [url] },
+          source: { type: "vector", url: url },
           "source-layer": sourceLayer,
-          minzoom: 8,
+          minzoom: minZoom,
           maxzoom: maxZoom,
           paint: {
             "circle-radius": {
               base: 1.75,
               stops: [
                 [8, 8],
-                [22, 120]
-              ]
+                [22, 120],
+              ],
             },
             "circle-color": "#fff",
             "circle-stroke-color": "transparent",
-            "circle-opacity": 0.8
+            "circle-opacity": 0.8,
           },
-          filter: ["==", "id", ""]
+          filter: ["==", "gid", ""],
         },
         id
       );
 
-      this.map.on("mouseenter", id, e => {
+      this.map.on("mouseenter", id, (e) => {
         this.map.getCanvas().style.cursor = "pointer";
 
         const coordinates = e.features[0].geometry.coordinates.slice();
@@ -462,8 +484,8 @@ export default {
         this.popup.remove();
       });
 
-      this.map.on("click", id, e => {
-        const id = e.features[0].id;
+      this.map.on("click", id, (e) => {
+        const id = e.features[0].properties.gid;
         const address = e.features[0].properties.address;
         const community = e.features[0].properties.community;
         const coordinates = e.features[0].geometry.coordinates;
@@ -480,7 +502,7 @@ export default {
         const assessedValueTrend = [
           { x: 2019, y: oldAssessedValue },
           { x: 2020, y: previousAssessedValue },
-          { x: 2021, y: assessedValue }
+          { x: 2021, y: assessedValue },
         ];
         const propertyClass = e.features[0].properties.property_class;
         const yearOfConstruction =
@@ -504,13 +526,13 @@ export default {
           landSizeFt
         );
 
-        this.map.setFilter("selected-property", ["==", "id", id]);
+        this.map.setFilter("selected-property", ["==", "gid", id]);
 
         this.map.flyTo({
           center: coordinates,
           zoom: 20,
           bearing: this.map.getBearing() + 45,
-          pitch: 60
+          pitch: 60,
         });
       });
     },
@@ -540,7 +562,7 @@ export default {
         year: yearOfConstruction,
         landuse: landUse,
         size_m: landSizeM,
-        size_ft: landSizeFt
+        size_ft: landSizeFt,
       };
       this.showPropertyInfo = true;
     },
@@ -551,17 +573,17 @@ export default {
           type: "fill",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url,
           },
           "source-layer": sourceLayer,
           paint: {
             "fill-color": color,
-            "fill-opacity": 0.8
+            "fill-opacity": 0.8,
           },
           layout: {
-            visibility: isVisible ? "visible" : "none"
+            visibility: isVisible ? "visible" : "none",
           },
-          filter: ["==", "year", year]
+          filter: ["==", "year", year],
         },
         "waterway"
       );
@@ -571,14 +593,12 @@ export default {
         this.map.setLayoutProperty(layer.id, "visibility", "visible");
         layer.legend && this.legends.push(layer.legend);
 
-        layer.isochrone && this.addIsochroneLayer(layer.isochrone);
-
         if (layer.id.includes("crime")) {
           this.map.flyTo({
             center: this.propertyInfo.coordinates,
             zoom: 13.5,
             bearing: 0,
-            pitch: 0
+            pitch: 0,
           });
         }
         if (layer.id.includes("flood")) {
@@ -586,21 +606,33 @@ export default {
             center: this.propertyInfo.coordinates,
             zoom: 16,
             bearing: 0,
-            pitch: 0
+            pitch: 0,
           });
+        }
+        if (layer.id.includes("safety-ems")) {
+          this.safetyAccessibilityEms = true;
+        }
+        if (layer.id.includes("safety-fire")) {
+          this.safetyAccessibilityFire = true;
         }
       } else {
         this.map.setLayoutProperty(layer.id, "visibility", "none");
         layer.legend &&
           this.legends.splice(
-            this.legends.findIndex(legend => legend.id === layer.id),
+            this.legends.findIndex((legend) => legend.id === layer.id),
             1
           );
-        layer.isochrone && this.removeIsochroneLayer();
+        if (layer.id.includes("safety-ems")) {
+          this.safetyAccessibilityEms = false;
+        }
+        if (layer.id.includes("safety-fire")) {
+          this.safetyAccessibilityFire = false;
+        }
       }
     },
     accessibilityHandler(accessibility) {
-      this.accessibility = accessibility;
+      this.addIsochroneLayer(accessibility.isochrone);
+      this.accessibilityMode = accessibility.action;
     },
     addFloodProbabilityLayer(id, url, sourceLayer, color, isVisible) {
       this.map.addLayer(
@@ -609,16 +641,16 @@ export default {
           type: "fill",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url,
           },
           "source-layer": sourceLayer,
           paint: {
             "fill-color": color,
-            "fill-opacity": 0.4
+            "fill-opacity": 0.4,
           },
           layout: {
-            visibility: isVisible ? "visible" : "none"
-          }
+            visibility: isVisible ? "visible" : "none",
+          },
         },
         this.baseMapIndex
       );
@@ -639,7 +671,7 @@ export default {
         type: "symbol",
         source: {
           type: "vector",
-          tiles: [url]
+          url: url,
         },
         "source-layer": sourceLayer,
         minzoom: minZoom,
@@ -648,7 +680,7 @@ export default {
           "text-color": color,
           "text-halo-color": "#333",
           "text-halo-blur": 1,
-          "text-halo-width": 1
+          "text-halo-width": 1,
         },
         layout: {
           visibility: isVisible ? "visible" : "none",
@@ -657,8 +689,8 @@ export default {
           "text-field": ["get", text],
           "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
           "text-size": 11,
-          "text-offset": [0, 1.5]
-        }
+          "text-offset": [0, 1.5],
+        },
       });
     },
     removeIsochroneLayer() {
@@ -672,7 +704,7 @@ export default {
 
       this.map.addSource("isochrone", {
         type: "geojson",
-        data: isochrone
+        data: isochrone,
       });
 
       this.map.addLayer(
@@ -682,8 +714,8 @@ export default {
           source: "isochrone",
           paint: {
             "fill-color": "#034e7b",
-            "fill-opacity": 0.4
-          }
+            "fill-opacity": 0.4,
+          },
         },
         "accessibility-parks"
       );
@@ -691,7 +723,7 @@ export default {
       this.map.fitBounds(BBOX(isochrone), {
         bearing: 0,
         pitch: 0,
-        padding: { top: 20, bottom: 20, left: 350, right: 20 }
+        padding: { top: 20, bottom: 20, left: 350, right: 20 },
       });
     },
     addFireStationsLayer(
@@ -710,7 +742,7 @@ export default {
         type: "symbol",
         source: {
           type: "vector",
-          tiles: [url]
+          url: url,
         },
         "source-layer": sourceLayer,
         minzoom: minZoom,
@@ -719,7 +751,7 @@ export default {
           "text-color": color,
           "text-halo-color": "#333",
           "text-halo-blur": 1,
-          "text-halo-width": 1
+          "text-halo-width": 1,
         },
         layout: {
           visibility: isVisible ? "visible" : "none",
@@ -728,8 +760,8 @@ export default {
           "text-field": ["get", text],
           "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
           "text-size": 11,
-          "text-offset": [0, 1.5]
-        }
+          "text-offset": [0, 1.5],
+        },
       });
     },
     addSchoolsLayer(
@@ -748,7 +780,7 @@ export default {
         type: "symbol",
         source: {
           type: "vector",
-          tiles: [url]
+          url: url,
         },
         "source-layer": sourceLayer,
         minzoom: minZoom,
@@ -757,7 +789,7 @@ export default {
           "text-color": color,
           "text-halo-color": "#333",
           "text-halo-blur": 1,
-          "text-halo-width": 1
+          "text-halo-width": 1,
         },
         layout: {
           visibility: isVisible ? "visible" : "none",
@@ -766,8 +798,8 @@ export default {
           "text-field": ["get", text],
           "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
           "text-size": 11,
-          "text-offset": [0, 1.5]
-        }
+          "text-offset": [0, 1.5],
+        },
       });
     },
     addParksLayer(id, url, sourceLayer, minZoom, maxZoom, color, isVisible) {
@@ -777,18 +809,18 @@ export default {
           type: "fill",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url,
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
           maxzoom: maxZoom,
           paint: {
             "fill-color": color,
-            "fill-opacity": 0.8
+            "fill-opacity": 0.8,
           },
           layout: {
-            visibility: isVisible ? "visible" : "none"
-          }
+            visibility: isVisible ? "visible" : "none",
+          },
         },
         "waterway"
       );
@@ -800,7 +832,7 @@ export default {
           type: "line",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url,
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
@@ -808,13 +840,13 @@ export default {
           paint: {
             "line-color": color,
             "line-width": 1,
-            "line-dasharray": [0, 2]
+            "line-dasharray": [0, 2],
           },
           layout: {
             visibility: isVisible ? "visible" : "none",
             "line-join": "round",
-            "line-cap": "round"
-          }
+            "line-cap": "round",
+          },
         },
         "waterway"
       );
@@ -826,7 +858,7 @@ export default {
           type: "line",
           source: {
             type: "vector",
-            tiles: [url]
+            url: url,
           },
           "source-layer": sourceLayer,
           minzoom: minZoom,
@@ -834,18 +866,18 @@ export default {
           paint: {
             "line-color": color,
             "line-width": 1,
-            "line-dasharray": [0, 2]
+            "line-dasharray": [0, 2],
           },
           layout: {
             visibility: isVisible ? "visible" : "none",
             "line-join": "round",
-            "line-cap": "round"
-          }
+            "line-cap": "round",
+          },
         },
         "road-label"
       );
-    }
-  }
+    },
+  },
 };
 </script>
 <style>

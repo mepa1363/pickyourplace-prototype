@@ -1,10 +1,10 @@
 export default {
   source: {
-    url: `${process.env.VUE_APP_TILE_SERVER}/public.schools/{z}/{x}/{y}.pbf`
+    url: "mapbox://mepa1363.69s1ymgf"
   },
   layer: {
     id: "accessibility-schools",
-    source: "public.schools",
+    source: "pickyourplace_schools",
     minZoom: 5,
     maxZoom: 22,
     color: "#edf8b1",

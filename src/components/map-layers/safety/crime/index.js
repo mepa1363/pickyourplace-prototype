@@ -1,10 +1,10 @@
 export default {
   source: {
-    url: `${process.env.VUE_APP_TILE_SERVER}/public.crime_summary/{z}/{x}/{y}.pbf`
+    url: "mapbox://mepa1363.8wimpwk3"
   },
   layer: {
     id: "safety-crime",
-    source: "public.crime_summary",
+    source: "pickyourplace_crime",
     color: [
       "interpolate",
       ["linear"],

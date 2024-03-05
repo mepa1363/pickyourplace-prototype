@@ -1,10 +1,10 @@
 export default {
   source: {
-    url: `${process.env.VUE_APP_TILE_SERVER}/public.property_value/{z}/{x}/{y}.pbf`
+    url: "mapbox://mepa1363.4npsor9o"
   },
   layer: {
     id: "property-value",
-    source: "public.property_value",
+    source: "pickyourplace_property_value",
     minZoom: 14,
     maxZoom: 22,
     radius: {
