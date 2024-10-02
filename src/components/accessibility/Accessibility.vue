@@ -56,19 +56,10 @@ export default {
       });
     },
     async getIsochrone() {
-      const origin = `${this.selectedPropertyLocation.lat},
-        ${this.selectedPropertyLocation.lon}`;
-      const duration = 900;
+      const duration = 15;
 
-      let url = `${process.env.VUE_APP_ISOCHRONE_SERVER}/otp/routers/calgary/isochrone?fromPlace=${origin}&mode=${this.selectedTransportationMode.query}&cutoffSec=${duration}`;
+      const url = `${process.env.VUE_APP_ISOCHRONE_SERVER}/otp/traveltime/isochrone?location=${this.selectedPropertyLocation.lat},${this.selectedPropertyLocation.lon}&mode=${this.transportation.query}&cutoff=${duration}M&date=2024-08-29T10:10:41-06:00&arriveBy=false&batch=true`;
 
-      if (this.transportationMode === "Walking") {
-        url += `&walkSpeed=1.38`;
-      }
-
-      if (this.transportationMode === "Public Transit") {
-        url += `&date=09-20-2021&time=8:00`;
-      }
       try {
         const response = await axios.get(url);
         this.isochrone =
