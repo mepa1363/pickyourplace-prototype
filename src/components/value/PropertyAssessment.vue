@@ -21,9 +21,9 @@
     </div>
     <v-row class="mt-2">
       <v-col cols="5">
-        <div>Class</div>
+        <div>Type</div>
         <div class="font-weight-bold">
-          {{ propertyInfo.class }}
+          {{ propertyInfo.type }}
         </div></v-col
       >
       <v-col cols="3"
@@ -58,32 +58,32 @@ export default {
           top: 18,
           left: 7,
           blur: 10,
-          opacity: 1
+          opacity: 1,
         },
         toolbar: {
-          show: false
+          show: false,
         },
         zoom: {
-          enabled: false
-        }
+          enabled: false,
+        },
       },
       colors: ["#1976d2"],
       dataLabels: {
         enabled: true,
         formatter: function (val) {
           return `$${Math.round(val / 1000).toLocaleString()}K`;
-        }
+        },
       },
       stroke: {
         width: [2, 2, 2, 2, 2, 2],
         curve: "smooth",
-        dashArray: [0, 0, 0, 2, 2, 2]
+        dashArray: [0, 0, 0, 2, 2, 2],
       },
       grid: {
-        borderColor: "#f1f1f1"
+        borderColor: "#f1f1f1",
       },
       xaxis: {
-        type: "date"
+        type: "date",
       },
       yaxis: {
         labels: {
@@ -91,20 +91,20 @@ export default {
           offsetX: -15,
           formatter: function (value) {
             return `$${Math.round(value / 1000).toLocaleString()}K`;
-          }
-        }
-      }
-    }
+          },
+        },
+      },
+    },
   }),
   computed: {
     series() {
       return [
         {
           name: "Assessed Value",
-          data: this.propertyInfo.trend
-        }
+          data: this.propertyInfo.trend,
+        },
       ];
-    }
-  }
+    },
+  },
 };
 </script>

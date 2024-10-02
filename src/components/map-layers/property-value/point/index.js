@@ -1,0 +1,57 @@
+export default {
+  source: {
+    url: "https://maps.pickyourplace.app/yyc_property_value_2024/{z}/{x}/{y}.mvt",
+    minZoom: 0,
+    maxZoom: 15,
+  },
+  layer: {
+    id: "property-value",
+    source: "yyc_property_value_2024",
+    minZoom: 14,
+    maxZoom: 22,
+    radius: {
+      base: 1.75,
+      stops: [
+        [14, 2],
+        [22, 80],
+      ],
+    },
+    color: [
+      "interpolate",
+      ["linear"],
+      ["get", "assessed_value"],
+      0,
+      "#feebe2",
+      201000,
+      "#fcc5c0",
+      374000,
+      "#fa9fb5",
+      494500,
+      "#f768a1",
+      601000,
+      "#dd3497",
+      746000,
+      "#ae017e",
+      254000000,
+      "#7a0177",
+    ],
+    isVisible: true,
+  },
+  legend: {
+    id: "property-value",
+    text: {
+      title: "$$$ Value",
+      lowerBound: "Lower",
+      higherBound: "Higher",
+    },
+    colors: [
+      "#feebe2",
+      "#fcc5c0",
+      "#fa9fb5",
+      "#f768a1",
+      "#dd3497",
+      "#ae017e",
+      "#7a0177",
+    ],
+  },
+};

@@ -3,7 +3,7 @@
     <div id="map"></div>
     <v-card
       v-if="showPropertyInfo"
-      max-width="344"
+      max-width="450"
       class="property-info mx-left ml-2 mt-2"
     >
       <v-list-item>
@@ -13,7 +13,20 @@
             propertyInfo.community
           }}</v-list-item-subtitle>
         </v-list-item-content>
-        <v-list-item-action>
+        <v-list-item-action class="flex-row">
+          <v-btn
+            small
+            text
+            color="primary"
+            @click="
+              map.flyTo({
+                center: propertyInfo.coordinates,
+                padding: { left: 500 },
+                zoom: 18,
+              })
+            "
+            >Zoom</v-btn
+          >
           <v-btn small icon @click="showPropertyInfo = false">
             <v-icon small color="grey lighten-1">mdi-close</v-icon>
           </v-btn>
@@ -101,6 +114,7 @@
     </v-card>
     <map-legend :legends="legends" />
     <feedback />
+    <map-layer-control @layerStatus="baseLayerHandler" />
   </div>
 </template>
 
@@ -108,9 +122,12 @@
 import mapboxgl from "mapbox-gl";
 import { ZoomControl, CompassControl } from "mapbox-gl-controls";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
-import { streetBaseMapStyle } from "./map-layers/base";
 
-import propertyValueLayer from "./map-layers/property-value";
+import propertyValueLayer from "./map-layers/property-value/point";
+import propertyValueAggregatedLayerH38 from "./map-layers/property-value/polygon-h3-8";
+import propertyValueAggregatedLayerH39 from "./map-layers/property-value/polygon-h3-9";
+import propertyValueAggregatedLayerH310 from "./map-layers/property-value/polygon-h3-10";
+import propertyValueAggregatedLayerH311 from "./map-layers/property-value/polygon-h3-11";
 import safetyCrimeLayer from "./map-layers/safety/crime";
 import safetyFloodProbabilityLayers from "./map-layers/safety/flood";
 import safetyEmsLayer from "./map-layers/safety/ems";
@@ -119,6 +136,7 @@ import accessibilitySchoolsLayer from "./map-layers/accessibility/schools";
 import accessibilityParksLayer from "./map-layers/accessibility/parks";
 import accessibilityTrailsLayer from "./map-layers/accessibility/trails";
 import accessibilityBikewaysLayer from "./map-layers/accessibility/bikeways";
+import mapLayerControl from "./map-layers/LayerControl.vue";
 
 import MapLegend from "./map-layers/Legend.vue";
 import PropertyAssessment from "./value/PropertyAssessment.vue";
@@ -135,7 +153,8 @@ import AccessibilityBikeways from "./accessibility/Bikeways.vue";
 
 import Feedback from "./Feedback.vue";
 
-import BBOX from "@turf/bbox";
+// import BBOX from "@turf/bbox";
+import Centroid from "@turf/centroid";
 
 export default {
   components: {
@@ -152,6 +171,7 @@ export default {
     AccessibilityTrails,
     AccessibilityBikeways,
     Feedback,
+    MapLayerControl: mapLayerControl,
   },
   data: () => ({
     map: null,
@@ -160,7 +180,9 @@ export default {
     showPropertyInfo: false,
     propertyInfo: {},
     legends: [propertyValueLayer.legend],
+    defaultMapStyle: null,
     baseMapIndex: "waterway-label",
+    layerIndex: "waterway",
     safetyCrimeLayer: safetyCrimeLayer,
     safetyFloodProbabilityLayers: safetyFloodProbabilityLayers,
     safetyAccessibilityEms: false,
@@ -230,7 +252,7 @@ export default {
 
     const map = new mapboxgl.Map({
       container: "map",
-      style: streetBaseMapStyle,
+      style: null,
       zoom: 14,
       maxZoom: 22,
       center: [-114.07432, 51.05373],
@@ -248,8 +270,25 @@ export default {
       new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
+        marker: false,
+        zoom: 18,
+        getItemValue: (e) => {
+          console.log(e);
+          if (e.place_type.includes("address")) {
+            const a = e.text.toUpperCase().split(",")[0].split(" ")[0];
+            const b = `${e.address} ${a}`;
+            console.log(b);
+            this.map.setFilter("selected-property", [
+              "in",
+              b,
+              ["string", ["get", "address"]],
+            ]);
+          }
+          return e.place_name;
+        },
       })
     );
+
     map.addControl(new ZoomControl(), "bottom-right");
     map.addControl(new CompassControl(), "bottom-right");
 
@@ -300,7 +339,20 @@ export default {
         },
         firstSymbolId
       );
+    });
 
+    map.on("style.load", () => {
+      this.addMapLayers();
+    });
+
+    this.map = map;
+  },
+  methods: {
+    baseLayerHandler(layer) {
+      this.map.setStyle(layer);
+      this.layerIndex = layer.includes("satellite") ? "" : "waterway";
+    },
+    addMapLayers() {
       this.addCrimeSummaryLayer(
         safetyCrimeLayer.layer.id,
         safetyCrimeLayer.source.url,
@@ -386,51 +438,93 @@ export default {
         false
       );
 
-      this.addPropertyValueLayer(
-        propertyValueLayer.layer.id,
-        propertyValueLayer.source.url,
-        propertyValueLayer.layer.source,
-        propertyValueLayer.layer.minZoom,
-        propertyValueLayer.layer.maxZoom,
-        propertyValueLayer.layer.radius,
-        propertyValueLayer.layer.color,
-        propertyValueLayer.layer.isVisible
-      );
-    });
+      this.addPropertyValueLayer(propertyValueLayer);
 
-    this.map = map;
-  },
-  methods: {
-    addPropertyValueLayer(
-      id,
-      url,
-      sourceLayer,
-      minZoom,
-      maxZoom,
-      radius,
-      color,
-      isVisible
-    ) {
+      this.addPropertyValueAggregatedLayer(propertyValueAggregatedLayerH38);
+
+      this.addPropertyValueAggregatedLayer(propertyValueAggregatedLayerH39);
+
+      this.addPropertyValueAggregatedLayer(propertyValueAggregatedLayerH310);
+
+      this.addPropertyValueAggregatedLayer(propertyValueAggregatedLayerH311);
+    },
+    addPropertyValueAggregatedLayer(propertyValueAggregatedLayer) {
       this.map.addLayer(
         {
-          id: id,
+          id: propertyValueAggregatedLayer.layer.id,
+          type: "fill",
+          source: {
+            type: "vector",
+            tiles: [propertyValueAggregatedLayer.source.url],
+            minzoom: propertyValueAggregatedLayer.source.minZoom,
+            maxzoom: propertyValueAggregatedLayer.source.maxZoom,
+          },
+          "source-layer": propertyValueAggregatedLayer.layer.source,
+          minzoom: propertyValueAggregatedLayer.layer.minZoom,
+          maxzoom: propertyValueAggregatedLayer.layer.maxZoom,
+          paint: {
+            "fill-color": propertyValueAggregatedLayer.layer.color,
+            "fill-opacity": 0.6,
+          },
+          layout: {
+            visibility: propertyValueAggregatedLayer.layer.isVisible
+              ? "visible"
+              : "none",
+          },
+        },
+        this.baseMapIndex
+      );
+
+      this.map.on("mousemove", propertyValueAggregatedLayer.layer.id, (e) => {
+        this.map.getCanvas().style.cursor = "pointer";
+
+        const coordinates = Centroid(
+          e.features[0].geometry
+        ).geometry.coordinates.slice();
+        const propertyValue = e.features[0].properties.assessed_value;
+        const numberOfProperties = e.features[0].properties.count;
+
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+          coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        this.popup
+          .setLngLat(coordinates)
+          .setHTML(
+            `<span style="font-size: 12px;"><strong>${numberOfProperties} properties</strong> with average value of</span><br/><h2>$${propertyValue.toLocaleString()}</h2>`
+          )
+          .addTo(this.map);
+      });
+
+      this.map.on("mouseleave", propertyValueAggregatedLayer.layer.id, () => {
+        this.map.getCanvas().style.cursor = "";
+        this.popup.remove();
+      });
+    },
+    addPropertyValueLayer(propertyValueLayer) {
+      this.map.addLayer(
+        {
+          id: propertyValueLayer.layer.id,
           type: "circle",
           source: {
             type: "vector",
-            url: url,
+            tiles: [propertyValueLayer.source.url],
+            minzoom: propertyValueLayer.source.minZoom,
+            maxzoom: propertyValueLayer.source.maxZoom,
           },
-          "source-layer": sourceLayer,
-          minzoom: minZoom,
-          maxzoom: maxZoom,
+          "source-layer": propertyValueLayer.layer.source,
+          minzoom: propertyValueLayer.layer.minZoom,
+          maxzoom: propertyValueLayer.layer.maxZoom,
           paint: {
-            "circle-radius": radius,
-            "circle-color": color,
+            "circle-radius": propertyValueLayer.layer.radius,
+            "circle-color": propertyValueLayer.layer.color,
             "circle-stroke-color": "transparent",
             "circle-opacity": 0.8,
           },
           layout: {
-            visibility: isVisible ? "visible" : "none",
+            visibility: propertyValueLayer.layer.isVisible ? "visible" : "none",
           },
+          filter: ["!=", "clustered", true],
         },
         this.baseMapIndex
       );
@@ -439,32 +533,38 @@ export default {
         {
           id: "selected-property",
           type: "circle",
-          source: { type: "vector", url: url },
-          "source-layer": sourceLayer,
-          minzoom: minZoom,
-          maxzoom: maxZoom,
+          source: {
+            type: "vector",
+            tiles: [propertyValueLayer.source.url],
+            minzoom: propertyValueLayer.source.minZoom,
+            maxzoom: propertyValueLayer.source.maxZoom,
+          },
+          "source-layer": propertyValueLayer.layer.source,
+          minzoom: propertyValueLayer.layer.minZoom,
+          maxzoom: propertyValueLayer.layer.maxZoom,
           paint: {
             "circle-radius": {
               base: 1.75,
               stops: [
                 [8, 8],
-                [22, 120],
+                [22, 160],
               ],
             },
             "circle-color": "#fff",
-            "circle-stroke-color": "transparent",
+            "circle-stroke-color": "#C0C0C0",
+            "circle-stroke-width": 0.5,
             "circle-opacity": 0.8,
           },
-          filter: ["==", "gid", ""],
+          filter: ["==", "id", ""],
         },
-        id
+        propertyValueLayer.layer.id
       );
 
-      this.map.on("mouseenter", id, (e) => {
+      this.map.on("mousemove", propertyValueLayer.layer.id, (e) => {
         this.map.getCanvas().style.cursor = "pointer";
 
         const coordinates = e.features[0].geometry.coordinates.slice();
-        const propertyValue = e.features[0].properties.value;
+        const propertyValue = e.features[0].properties.assessed_value;
         const propertyAddress = e.features[0].properties.address;
 
         while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
@@ -474,42 +574,55 @@ export default {
         this.popup
           .setLngLat(coordinates)
           .setHTML(
-            `<span style="font-size: 12px;">${propertyAddress}</span><br/><h2 style="">$${propertyValue.toLocaleString()}</h2>`
+            `<span style="font-size: 12px;">${propertyAddress}</span><br/><h2 style="">$${Math.round(
+              propertyValue
+            ).toLocaleString()}</h2>`
           )
           .addTo(this.map);
       });
 
-      this.map.on("mouseleave", id, () => {
+      this.map.on("mouseleave", propertyValueLayer.layer.id, () => {
         this.map.getCanvas().style.cursor = "";
         this.popup.remove();
       });
 
-      this.map.on("click", id, (e) => {
-        const id = e.features[0].properties.gid;
+      this.map.on("click", propertyValueLayer.layer.id, (e) => {
+        const id = e.features[0].properties.id;
         const address = e.features[0].properties.address;
         const community = e.features[0].properties.community;
         const coordinates = e.features[0].geometry.coordinates;
-        const assessedValue = e.features[0].properties.value;
-        const previousAssessedValue = e.features[0].properties.value_2020;
-        const growthValue =
+        const assessedValue = e.features[0].properties.assessed_value;
+        const currentYear = e.features[0].properties.roll_year;
+        const historicalAssessedValues = JSON.parse(
+          e.features[0].properties.historical_assessed_values
+        );
+        const previousAssessedValue = historicalAssessedValues.find(
+          (assessedValue) => assessedValue.year === currentYear - 1
+        )?.value;
+        const growthValueYoY =
           previousAssessedValue != null && previousAssessedValue > 0
             ? Math.round(
                 ((assessedValue - previousAssessedValue) * 100) /
                   previousAssessedValue
               )
             : null;
-        const oldAssessedValue = e.features[0].properties.value_2019;
-        const assessedValueTrend = [
-          { x: 2019, y: oldAssessedValue },
-          { x: 2020, y: previousAssessedValue },
-          { x: 2021, y: assessedValue },
-        ];
-        const propertyClass = e.features[0].properties.property_class;
+
+        const assessedValueTrend = historicalAssessedValues
+          .map((assessedValue) => {
+            return { x: assessedValue.year, y: assessedValue.value };
+          })
+          .sort((a, b) => a.x - b.x);
+        assessedValueTrend.push({ x: currentYear, y: assessedValue });
+
         const yearOfConstruction =
           e.features[0].properties.year_of_construction;
         const landUse = e.features[0].properties.land_use_designation;
-        const landSizeM = e.features[0].properties.land_size_m;
-        const landSizeFt = e.features[0].properties.land_size_ft;
+        const proertyType =
+          e.features[0].properties.sub_property_use_description;
+        const landSizeM = e.features[0].properties.land_size_m2;
+        const landSizeFt = Math.round(
+          e.features[0].properties.land_size_m2 * 10.76391042
+        );
 
         this.loadPropertyInfo(
           id,
@@ -517,23 +630,83 @@ export default {
           address,
           community,
           assessedValue,
-          growthValue,
+          growthValueYoY,
           assessedValueTrend,
-          propertyClass,
           yearOfConstruction,
           landUse,
+          proertyType,
           landSizeM,
           landSizeFt
         );
 
-        this.map.setFilter("selected-property", ["==", "gid", id]);
+        this.map.setFilter("selected-property", ["==", "id", id]);
 
-        this.map.flyTo({
-          center: coordinates,
-          zoom: 20,
-          bearing: this.map.getBearing() + 45,
-          pitch: 60,
-        });
+        // this.map.setFilter(propertyValueLayer.layer.id, ["==", "id", id]);
+      });
+
+      this.map.addLayer(
+        {
+          id: `${propertyValueLayer.layer.id}-cluster`,
+          type: "circle",
+          source: {
+            type: "vector",
+            tiles: [propertyValueLayer.source.url],
+            minzoom: propertyValueLayer.source.minZoom,
+            maxzoom: propertyValueLayer.source.maxZoom,
+          },
+          "source-layer": propertyValueLayer.layer.source,
+          minzoom: propertyValueLayer.layer.minZoom,
+          maxzoom: propertyValueLayer.layer.maxZoom,
+          paint: {
+            "circle-radius": propertyValueLayer.layer.radius,
+            "circle-color": propertyValueLayer.layer.color,
+            "circle-stroke-color": "transparent",
+            "circle-opacity": 0.8,
+          },
+          layout: {
+            visibility: propertyValueLayer.layer.isVisible ? "visible" : "none",
+          },
+          filter: ["==", "clustered", true],
+        },
+        this.baseMapIndex
+      );
+
+      this.map.on(
+        "mousemove",
+        `${propertyValueLayer.layer.id}-cluster`,
+        (e) => {
+          this.map.getCanvas().style.cursor = "pointer";
+
+          const coordinates = e.features[0].geometry.coordinates.slice();
+          const propertyValue = e.features[0].properties.assessed_value;
+          const propertyAddress = `<strong>${e.features[0].properties.point_count} properties</strong> with average value of`;
+
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+
+          this.popup
+            .setLngLat(coordinates)
+            .setHTML(
+              `<span style="font-size: 12px;">${propertyAddress}</span><br/><h2 style="">$${Math.round(
+                propertyValue
+              ).toLocaleString()}</h2>`
+            )
+            .addTo(this.map);
+        }
+      );
+
+      this.map.on(
+        "mouseleave",
+        `${propertyValueLayer.layer.id}-cluster`,
+        () => {
+          this.map.getCanvas().style.cursor = "";
+          this.popup.remove();
+        }
+      );
+
+      this.map.on("click", `${propertyValueLayer.layer.id}-cluster`, (e) => {
+        console.log(e.features[0].properties);
       });
     },
     loadPropertyInfo(
@@ -542,11 +715,11 @@ export default {
       address,
       community,
       assessedValue,
-      growthValue,
+      growthValueYoY,
       assessedValueTrend,
-      propertyClass,
       yearOfConstruction,
       landUse,
+      proertyType,
       landSizeM,
       landSizeFt
     ) {
@@ -556,11 +729,11 @@ export default {
         address: address,
         community: community,
         value: assessedValue,
-        growth: growthValue,
+        growth: growthValueYoY,
         trend: assessedValueTrend,
-        class: propertyClass,
         year: yearOfConstruction,
         landuse: landUse,
+        type: proertyType,
         size_m: landSizeM,
         size_ft: landSizeFt,
       };
@@ -585,7 +758,7 @@ export default {
           },
           filter: ["==", "year", year],
         },
-        "waterway"
+        this.layerIndex
       );
     },
     layerHandler(layer) {
@@ -593,22 +766,22 @@ export default {
         this.map.setLayoutProperty(layer.id, "visibility", "visible");
         layer.legend && this.legends.push(layer.legend);
 
-        if (layer.id.includes("crime")) {
-          this.map.flyTo({
-            center: this.propertyInfo.coordinates,
-            zoom: 13.5,
-            bearing: 0,
-            pitch: 0,
-          });
-        }
-        if (layer.id.includes("flood")) {
-          this.map.flyTo({
-            center: this.propertyInfo.coordinates,
-            zoom: 16,
-            bearing: 0,
-            pitch: 0,
-          });
-        }
+        // if (layer.id.includes("crime")) {
+        //   this.map.flyTo({
+        //     center: this.propertyInfo.coordinates,
+        //     zoom: 13.5,
+        //     bearing: 0,
+        //     pitch: 0,
+        //   });
+        // }
+        // if (layer.id.includes("flood")) {
+        //   this.map.flyTo({
+        //     center: this.propertyInfo.coordinates,
+        //     zoom: 16,
+        //     bearing: 0,
+        //     pitch: 0,
+        //   });
+        // }
         if (layer.id.includes("safety-ems")) {
           this.safetyAccessibilityEms = true;
         }
@@ -720,11 +893,11 @@ export default {
         "accessibility-parks"
       );
 
-      this.map.fitBounds(BBOX(isochrone), {
-        bearing: 0,
-        pitch: 0,
-        padding: { top: 20, bottom: 20, left: 350, right: 20 },
-      });
+      // this.map.fitBounds(BBOX(isochrone), {
+      //   bearing: 0,
+      //   pitch: 0,
+      //   padding: { top: 20, bottom: 20, left: 350, right: 20 },
+      // });
     },
     addFireStationsLayer(
       id,
@@ -822,7 +995,7 @@ export default {
             visibility: isVisible ? "visible" : "none",
           },
         },
-        "waterway"
+        this.layerIndex
       );
     },
     addTrailsLayer(id, url, sourceLayer, minZoom, maxZoom, color, isVisible) {
@@ -848,7 +1021,7 @@ export default {
             "line-cap": "round",
           },
         },
-        "waterway"
+        this.layerIndex
       );
     },
     addBikewaysLayer(id, url, sourceLayer, minZoom, maxZoom, color, isVisible) {
@@ -874,7 +1047,7 @@ export default {
             "line-cap": "round",
           },
         },
-        "road-label"
+        this.baseMapIndex
       );
     },
   },
