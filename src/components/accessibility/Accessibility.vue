@@ -57,8 +57,9 @@ export default {
     },
     async getIsochrone() {
       const duration = 15;
+      const mode = this.selectedTransportationMode.query;
 
-      const url = `${process.env.VUE_APP_ISOCHRONE_SERVER}/otp/traveltime/isochrone?location=${this.selectedPropertyLocation.lat},${this.selectedPropertyLocation.lon}&mode=${this.transportation.query}&cutoff=${duration}M&date=2024-08-29T10:10:41-06:00&arriveBy=false&batch=true`;
+      const url = `${process.env.VUE_APP_ISOCHRONE_SERVER}/otp/traveltime/isochrone?location=${this.selectedPropertyLocation.lat},${this.selectedPropertyLocation.lon}&mode=${mode}&cutoff=${duration}M`;
 
       try {
         const response = await axios.get(url);
